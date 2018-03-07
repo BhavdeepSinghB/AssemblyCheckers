@@ -1,4 +1,4 @@
-    .data
+   .data
 nl:     .asciiz "\n"
 rs:     .asciiz "Source Row: "
 cs:     .asciiz "Source Column: "
@@ -10,6 +10,8 @@ rw:     .asciiz "Red Won"
 ww:     .asciiz "White Won"
 ex:     .asciiz "Exiting"
 erm:    .asciiz "Error: Invalid jump or move"
+tp:     .asciiz "The possible moves are"
+tb:     .asciiz "\t"
     .globl main
     
     .code
@@ -17,10 +19,12 @@ main:
 
     addi $sp,$sp,-400
     mov $s0,$sp
-    addi $sp,$sp,-16
+    addi $sp,$sp,-20
     mov $s1,$sp
     addi $sp,$sp,-8
     mov $k1,$sp
+    addi $sp,$sp,-384
+    mov $fp,$sp
     #-----Set Board----------------
     
     mov $t0,$zero
@@ -134,7 +138,8 @@ setwhiteouttest:
     
     li $k0,0                                    #CurrColor - 0 //red
 
-    
+    li $t0,7
+    sw $t0,220($s0)
     #-----Loop to ask for numbers and set in board---------
     
     
@@ -142,6 +147,10 @@ mainloop:
     jal displayboard
     li $t9,0x1
     
+    beqz $k0,askuser
+    beq $k0,1,askcomp
+
+askuser:
     la $a0,rs
     syscall $print_string
     syscall $read_int
@@ -162,6 +171,114 @@ mainloop:
     syscall $read_int
     sw $v0,0($s1)
     
+    j nextmain
+    
+askcomp:
+    jal getvalidjumps
+ 
+    mov $t4,$v0
+    
+    beqz $t4,trymovesforcomp
+    
+    j tryjumps
+    
+trymovesforcomp:
+    jal getvalidmoves
+    
+    mov $s7,$zero
+    
+    mul $t5,$s7,4
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,12($s1)
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,1
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,8($s1)
+    
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,2
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,4($s1)
+
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,3
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,0($s1)
+    
+    la $a0,nl
+    syscall $print_string
+    jal printtuples
+    jal executemove
+    
+    #jal displayboard
+    
+tryjumps:
+    mov $s7,$zero
+    
+    mul $t5,$s7,4
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,12($s1)
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,1
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,8($s1)
+    
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,2
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,4($s1)
+
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,3
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    sw $a0,0($s1)
+    
+    la $a0,nl
+    syscall $print_string
+    jal printtuples
+    jal executejump
+    
+    j exit
+    
+nextmain:
     lw $t1,12($s1)
     lw $t2,8($s1)
     
@@ -241,6 +358,8 @@ executemove:
     jal checkforking
     
     j changecolor
+    
+    j exit
     
     
     
@@ -709,6 +828,354 @@ err:
     syscall $print_string
     
     j mainloop
+    
+getvalidmoves:
+    addi $sp,$sp,-4
+    sw $ra,0($sp)
+    mov $a3,$sp
+    
+    mov $t0,$zero               #t0 = r1
+    li  $t1,-1                  #t1 = r2
+    mov $t2,$zero               #t2 = c1
+    li  $t3,-1                  #t3 = c2
+    mov $t4,$zero               #t4 = total
+    
+    li $t5,0                    #t5 = idxr1
+    li $t6,0                    #t6 = idxc1
+    #li $t8,1
+    
+    j forloop1test
+    
+forloop1:
+    mov $t2,$zero
+    
+    j forloop2test
+    
+forloop2:
+    addi $s6,$t0,1
+   
+    addi $t1,$t0,-1
+    mov $t8,$k0
+    mul $t7,$t0,10
+    add $t7,$t7,$t2
+    mul $t7,$t7,4
+    add $t7,$t7,$s0
+    lw $t7,0($t7)
+    
+    beq $t8,0,checkforred
+    beq $t8,1,checkforwhite
+    
+    
+checkforred:
+    beq $t7,1,forloop3test
+    beq $t7,5,forloop3test
+    
+    j addtoforloop2
+    
+checkforwhite:
+    beq $t7,3,forloop3test
+    beq $t7,7,forloop3test
+    
+    j addtoforloop2
+    
+forloop3:
+    addi $t3,$t2,-1
+    addi $s2,$t2,1
+    
+    
+    
+    j forloop4test
+
+forloop4:
+
+   
+
+   sw $t0,12($s1)
+   sw $t2,8($s1)
+   sw $t1,4($s1)
+   sw $t3,0($s1)
+   sw $t4,16($s1)
+  
+   jal isValidMove
+   
+   lw $t0,12($s1)
+   lw $t2,8($s1)
+   lw $t1,4($s1)
+   lw $t3,0($s1)
+   lw $t4,16($s1)
+ 
+   beq $v0,1,into
+   j nextloop4
+
+into:
+
+    mul $t5,$t4,4
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t0,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,1
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t2,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,2
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t1,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,3
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t3,0($t6)
+    
+    addi $t4,$t4,1
+    
+    beq $t4,24,returnfunc
+    
+nextloop4:
+     addi $t3,$t3,2
+    
+forloop4test:
+    ble $t3,$s2,forloop4
+    
+    addi $t1,$t1,2
+    
+forloop3test:
+    ble $t1,$s6,forloop3
+    
+addtoforloop2:    
+    addi $t2,$t2,1
+    
+forloop2test:
+    blt $t2,10,forloop2
+    
+    
+    addi $t0,$t0,1
+    
+forloop1test:
+    blt $t0,10,forloop1
+    
+returnfunc:
+    mov $v0,$t4
+    
+    lw $ra,0($a3)
+    jr $ra
+
+
+    
+printtuples:
+    mov $s7,$zero
+    j forlooptest
+    
+forloop:
+    mov $a0,$s7
+    syscall $print_int
+    
+    la $a0,tb
+    syscall $print_string
+    
+    mul $t5,$s7,4
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    
+    syscall $print_int
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,1
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    
+    syscall $print_int
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,2
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    
+    syscall $print_int
+    
+    mul $t5,$s7,4
+    addi $t5,$t5,3
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    lw $a0,0($t6)
+    
+    syscall $print_int
+    
+    la $a0,nl
+    syscall $print_string
+    
+    addi $s7,$s7,1
+forlooptest:
+    blt $s7,$t4,forloop
+    
+    jr $ra
+    
+getvalidjumps:
+
+    addi $sp,$sp,-4
+    sw $ra,0($sp)
+    mov $a3,$sp
+   
+    mov $t0,$zero               #t0 = r1
+    li  $t1,-1                  #t1 = r2
+    mov $t2,$zero               #t2 = c1
+    li  $t3,-1                  #t3 = c2
+    mov $t4,$zero               #t4 = total
+    
+    li $t5,0                    #t5 = idxr1
+    li $t6,0                    #t6 = idxc1
+ 
+    
+    j fl1test
+    
+fl1:
+    mov $t2,$zero
+    
+    j fl2test
+    
+fl2:
+    addi $t3,$t2,-2
+    addi $s6,$t0,2
+    addi $t1,$t0,-2
+    mov $t8,$k0
+    mul $t7,$t0,10
+    add $t7,$t7,$t2
+    mul $t7,$t7,4
+    add $t7,$t7,$s0
+    lw $t7,0($t7)
+    
+    beq $t8,0,cfred
+    beq $t8,1,cfwhite
+    
+    
+cfred:
+    beq $t7,1,fl3test
+    beq $t7,5,fl3test
+    
+    j addtofl2
+    
+cfwhite:
+    beq $t7,3,fl3test
+    beq $t7,7,fl3test
+    
+    j addtofl2
+    
+fl3:
+     addi $s2,$t2,2
+    
+    j fl4test
+
+fl4:
+   
+   sw $t4,16($s1)
+   sw $t0,12($s1)
+   sw $t2,8($s1)
+   sw $t1,4($s1)
+   sw $t3,0($s1)  
+  
+   jal isValidJump
+   
+   lw $t4,16($s1)
+   lw $t0,12($s1)
+   lw $t2,8($s1)
+   lw $t1,4($s1)
+   lw $t3,0($s1)  
+   
+   addi $s6,$t0,2
+ 
+ 
+   beq $v0,1,into2
+   j nextl4
+
+into2:
+    mul $t5,$t4,4
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t0,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,1
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t2,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,2
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t1,0($t6)
+    
+    mul $t5,$t4,4
+    addi $t5,$t5,3
+    
+    mul $t5,$t5,4
+    
+    add $t6,$t5,$fp
+    sw $t3,0($t6)
+    
+    addi $t4,$t4,1
+    
+    beq $t4,24,returnfunc2
+    
+nextl4:
+     addi $t3,$t3,2
+    
+fl4test:
+    ble $t3,$s2,fl4
+    
+    addi $t1,$t1,2
+    
+fl3test:
+    ble $t1,$s6,fl3
+    
+addtofl2:
+    addi $t2,$t2,1
+    
+fl2test:
+    blt $t2,10,fl2
+    
+    
+    addi $t0,$t0,1
+    
+fl1test:
+    blt $t0,10,fl1
+    
+returnfunc2:
+    mov $v0,$t4
+    
+    lw $ra,0($a3)
+    jr $ra
+    
 
 exit:
     syscall $exit
