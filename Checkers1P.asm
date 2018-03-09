@@ -12,6 +12,8 @@ ex:     .asciiz "Exiting"
 erm:    .asciiz "Error: Invalid jump or move"
 tp:     .asciiz "The possible moves are"
 tb:     .asciiz "\t"
+eu:     .asciiz "Enter a username: "
+es:     .space  15
     .globl main
     
     .code
@@ -138,8 +140,23 @@ setwhiteouttest:
     
     li $k0,0                                    #CurrColor - 0 //red
 
-    li $t0,7
-    sw $t0,220($s0)
+
+setrandom:
+    li $t9,0
+    li $a2,0x6000
+    mov $s2,$zero
+    la $a0,eu
+    syscall $print_string
+    la $a0,es
+    li $a1,15
+    syscall $read_string
+    
+    
+    syscall $random
+    addi $sp,$sp,-4
+    sw $v0,0($sp)
+    mov $gp,$sp
+
     #-----Loop to ask for numbers and set in board---------
     
     
@@ -174,6 +191,24 @@ askuser:
     j nextmain
     
 askcomp:
+    lw $t1,0($gp)
+    
+    j testrand
+    
+whilerand:
+    jal lfsr
+    mov $t0,$v0
+    sll $s2,$s2,1
+    or $s2,$s2,$v0
+    mov $a0,$s2
+    
+    addi $t9,$t9,1
+    
+testrand:
+    bne $t9,5,whilerand
+    
+    mov $v1,$s2
+    
     jal getvalidjumps
  
     mov $t4,$v0
@@ -185,7 +220,10 @@ askcomp:
 trymovesforcomp:
     jal getvalidmoves
     
-    mov $s7,$zero
+    mov $s7,$v1
+    mov $t4,$v0
+    addi $t3,$t4,-1
+    rem $s7,$t3,$s7
     
     mul $t5,$s7,4
     
@@ -226,7 +264,7 @@ trymovesforcomp:
     
     la $a0,nl
     syscall $print_string
-    jal printtuples
+    #jal printtuples
     jal executemove
     
     #jal displayboard
@@ -273,7 +311,7 @@ tryjumps:
     
     la $a0,nl
     syscall $print_string
-    jal printtuples
+    #jal printtuples
     jal executejump
     
     j exit
@@ -634,7 +672,7 @@ redgamepiece:
     beq $t0,5,returnjump
     beq $t0,0,returnjump
     
-    li $v1,1
+    li $v0,1
     
     jr $ra
 
@@ -647,7 +685,7 @@ redking:
     beq $t0,5,returnjump
     beq $t0,0,returnjump
     
-    li $v1,1
+    li $v0,1
     
     jr $ra
     
@@ -659,7 +697,7 @@ whitegamepiece:
     beq $t0,7,returnjump
     beq $t0,0,returnjump    
     
-    li $v1,1
+    li $v0,1
     
     jr $ra
     
@@ -671,7 +709,7 @@ whiteking:
     beq $t0,7,returnjump
     beq $t0,0,returnjump
     
-    li $v1,1
+    li $v0,1
     
     jr $ra 
     
@@ -1176,6 +1214,17 @@ returnfunc2:
     lw $ra,0($a3)
     jr $ra
     
+
+lfsr:
+    li $a3,0x00000001
+    srl $t0,$t1,1
+    and $t2,$t1,$a3
+    neg $t2,$t2
+    and $t2,$t2,$a2
+    xor $v0,$t0,$t2
+    and $v0,$v0,$a3
+    
+    jr $ra
 
 exit:
     syscall $exit
