@@ -585,7 +585,7 @@ promotewhite:
     jr $ra
     
 checkforredking:
-    beq $a1,7,promotered
+    beq $a1,9,promotered
     jr $ra
 
 promotered:
